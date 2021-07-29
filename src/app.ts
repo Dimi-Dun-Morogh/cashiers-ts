@@ -1,3 +1,6 @@
-import { ConnectDb } from './db';
+import {  createShop, readShop } from './db';
 
-ConnectDb().then((connection) => connection.end());
+
+
+//createShop({name: 'METRO', city: 'Odessa', address: 'Khmelnitskay 88', cashRegisters: []})
+readShop(1);
