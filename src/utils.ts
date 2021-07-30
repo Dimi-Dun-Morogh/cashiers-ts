@@ -1,3 +1,5 @@
+import { Filters, ID } from "./models";
+
 const logger = {
   getTimeStamp: (): string => new Date().toLocaleTimeString(),
   info(namespace: string, message: string, object?: any) {
@@ -49,7 +51,7 @@ function IsJsonString(str:string) {
   }
 }
 
-/* parseSqlJson
+/** parseSqlJson
 {
   id: 1,
 ...
@@ -73,9 +75,30 @@ const parseSqlJson = (sqlData: object)=> {
   })
   return Object.fromEntries(data)
 }
+/**
+ * not gonna work for json
+ * @param filters object like { id:1 ,sex: "female", yearsOfExperience: 3}
+ * @returns string WHERE id = "1" AND sex = "female" AND yearsOfExperience = "3"
+ */
+const stringifyQueryFilter = (filters:Filters):string|null=> {
+  if(!filters) return null;
+
+  let newStr = Object.entries(filters).reduce((acc,[key,value])=>{
+    acc+=` AND ${key} = "${value}"`
+    return acc;
+  }, '')
+  return  newStr.replace('AND', 'WHERE')
+}
+
+const jsonQueryFilter = (filters: Filters) :string =>{
+  const [cellName, fltr] = Object.entries(filters)[0];
+  return `json_contains (${cellName}, '"${fltr}"')`
+}
 
 export {
   logger,
   fixBracketsJSON,
-  parseSqlJson
+  parseSqlJson,
+  stringifyQueryFilter,
+  jsonQueryFilter
 };

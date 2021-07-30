@@ -19,6 +19,9 @@ export type WorkingSchedule = {
   dayOfTheWeek: Dayname
   shiftName: Shiftname
   time: ShiftTime
+  cashRegisterId: number
+  cashierId:number
+  shopId:number
 };
 
 export type Cashier = {
@@ -33,6 +36,10 @@ export type CashRegister = {
   id?: number
   shopId: number
   number: number
+};
+
+export type Filters = {
+  [key:string] : number | string
 };
 
 export type ID = string | number;

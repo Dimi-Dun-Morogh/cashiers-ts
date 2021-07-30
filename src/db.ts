@@ -1,7 +1,12 @@
+/* eslint-disable max-classes-per-file */
 import mysql from 'mysql';
 import config from './config';
-import { ID, Shop } from './models';
-import { logger, fixBracketsJSON, parseSqlJson } from './utils';
+import {
+  Cashier, CashRegister, Filters, ID, Shop, WorkingSchedule,
+} from './models';
+import {
+  logger, fixBracketsJSON, parseSqlJson, stringifyQueryFilter, jsonQueryFilter,
+} from './utils';
 
 const params = {
   user: config.mysql.user,
@@ -56,14 +61,26 @@ const CreateItem = async (table: string, itemObj: Object) => {
   }
 };
 
-const ReadItems = async (table: string, id?:ID) : Promise<any> => {
+/**
+ * ReadItems
+ * @param table
+ * @param filters object, dont try to filter json with it
+ * @param jsonFilter object ex {worksInShifts: 'dayShift'} =>json_contains (worksInShifts,
+ * '"dayShift"')
+ * @returns
+ */
+const ReadItems = async (table: string, filters?: Filters, jsonFilter?: Filters) : Promise<any> => {
   try {
     let queryString = `SELECT * from ${table}`;
-    if(id) queryString += ` WHERE id = "${id}"`
+
+    if (filters) queryString += ` ${stringifyQueryFilter(filters)}`;
+    if (jsonFilter) {
+      queryString += `${filters ? ' AND' : 'WHERE'} ${jsonQueryFilter(jsonFilter)}`;
+    }
 
     const connection = await ConnectDb();
     const items = await Query(connection, queryString);
-    const parsed:[]  = JSON.parse(JSON.stringify(items)).map((item:object)=>parseSqlJson(item))
+    const parsed:[] = JSON.parse(JSON.stringify(items)).map((item:object) => parseSqlJson(item));
     logger.info(
       NAMESPACE,
       `reading items from ${table}, query is ${queryString}`,
@@ -113,31 +130,63 @@ const DeleteItem = async (table: string, id: string | number) :Promise<any> => {
     logger.info(NAMESPACE, `deleting id ${id} from ${table}`);
     connection.end();
     logger.info(NAMESPACE, 'delete', deleted);
+    return deleted;
   } catch (error) {
     logger.error(NAMESPACE, error.message, error);
   }
 };
 
-const createShop = async(shop: Shop)=>{
-  const newShop = await CreateItem('Shop', shop);
-  return newShop;
+class CustomCRUD <T> {
+  readonly tableName:string = '';
+
+  constructor(table:string) {
+    this.tableName = table;
+  }
+
+  async create(newItem: T) {
+    const data = await CreateItem(this.tableName, newItem);
+    return data;
+  }
+
+  /**
+   *
+ * @param filters object, dont try to filter json with it
+ * @param jsonFilters object ex {worksInShifts: 'dayShift'} =>json_contains (worksInShifts,
+ * '"dayShift"')
+   */
+
+  async read(filters?:Filters, jsonFilters?: Filters) {
+    const data = await ReadItems(this.tableName, filters, jsonFilters);
+    return data;
+  }
+
+  async update(id:ID, newItem: T) {
+    const data = await UpdateItem(this.tableName, id, newItem);
+    return data;
+  }
+
+  async delete(id: ID) {
+    const data = await DeleteItem(this.tableName, id);
+    return data;
+  }
 }
 
-const readShop = async(id: ID) => {
-  const data = await ReadItems('Shop', id);
+const ShopCRUD = new CustomCRUD<Shop>('Shop');
+const CashRegCRUD = new CustomCRUD<CashRegister>('CashRegister');
+const WorkScheduleCRUD = new CustomCRUD<WorkingSchedule>('workingSchedule');
 
-  return data;
+class CashierCustomCRUD extends CustomCRUD<Cashier> {
+  static async hireCashier(cashierId: ID, shopId: ID) {
+    const data = await CreateItem('CashiersInShops', { cashierId, shopId });
+    return data;
+  }
 }
 
-const updateShop = async(id: ID, newShop: Shop) => {
-  const data = await UpdateItem('Shop', id, newShop)
-  return data;
-}
-
+const CashierCRUD = new CashierCustomCRUD('cashier');
 
 export {
-  ConnectDb,
-  createShop,
-  readShop,
-  updateShop
+  CashierCRUD,
+  ShopCRUD,
+  CashRegCRUD,
+  WorkScheduleCRUD,
 };

@@ -1,6 +1,7 @@
-import {  createShop, readShop } from './db';
+import {  CashierCRUD, CashRegCRUD } from './db';
 
 
 
 //createShop({name: 'METRO', city: 'Odessa', address: 'Khmelnitskay 88', cashRegisters: []})
-readShop(1);
+//CashRegCRUD.read({id:1});
+CashierCRUD.read({sex:'male'},{worksInShifts:'dayShift'})
