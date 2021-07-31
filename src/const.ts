@@ -1,4 +1,4 @@
-const shopNames = ['ATB', 'METRO'] as const;
+const shopNames = ['ATB', 'METRO', 'Arsen', 'Silpo'] as const;
 const shiftNames = ['nightShift', 'dayShift', 'morningShift'] as const;
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
   'Thursday', 'Friday', 'Saturday'] as const;

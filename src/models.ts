@@ -29,7 +29,9 @@ export type Cashier = {
   age: number
   sex: string
   yearsOfExperience: number
+  name: string
   worksInShifts: Shiftname[]
+  pastWorks: number[]
 };
 
 export type CashRegister = {
@@ -43,3 +45,10 @@ export type Filters = {
 };
 
 export type ID = string | number;
+
+export enum ROUTES {
+  CASHIERS = '/api/cashiers',
+  SHOPS = '/api/shops',
+  CASHREGS = '/api/cashregs',
+  WORKSCHEDULES = '/api/workschedule',
+}

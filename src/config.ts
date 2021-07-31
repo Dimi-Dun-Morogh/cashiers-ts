@@ -26,4 +26,9 @@ const config = {
   mysql: MYSQL,
 };
 
+export const ApiConfig = {
+  PORT: process.env.APP_PORT || 3011,
+  URL: process.env.APP_URL || 'http://localhost',
+};
+
 export default config;
