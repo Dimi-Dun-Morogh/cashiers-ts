@@ -1,0 +1,22 @@
+body {
+  background-color: moccasin;
+}
+
+/* .app-wrap {
+  width: 800px;
+} */
+
+#cashier-form {
+  max-width: 400px;
+  background-color: antiquewhite;
+  padding: 10px;
+  border: 1px solid azure;
+  border-radius: 5px;
+  align-self: flex-start;
+}
+
+.db-content-item {
+  align-self: stretch;
+  background-color: white;
+  border: 1px solid;
+}

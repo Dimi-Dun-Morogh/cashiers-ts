@@ -6,7 +6,7 @@ module.exports = {
   },
   plugins: ['@typescript-eslint'],
   extends: ['airbnb-typescript'],
-  ignorePatterns: ['.eslintrc.js'],
+  ignorePatterns: ['.eslintrc.js', "frontEnd/*.js"],
   rules: {
     'consistent-return': 1,
     'no-console': 'off',

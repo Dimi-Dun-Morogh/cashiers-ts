@@ -2,10 +2,19 @@
 import mysql from 'mysql';
 import config from './config';
 import {
-  Cashier, CashRegister, Filters, ID, Shop, WorkingSchedule,
+  Cashier,
+  CashRegister,
+  Filters,
+  ID,
+  Shop,
+  WorkingSchedule,
 } from './models';
 import {
-  logger, fixBracketsJSON, parseSqlJson, stringifyQueryFilter, jsonQueryFilter,
+  logger,
+  fixBracketsJSON,
+  parseSqlJson,
+  stringifyQueryFilter,
+  jsonQueryFilter,
 } from './utils';
 
 const params = {
@@ -31,16 +40,17 @@ const ConnectDb = () => new Promise<mysql.Connection>((resolve, reject) => {
   });
 });
 
-const Query = async (connection: mysql.Connection, query: string) => new
-Promise((resolve, reject) => {
-  connection.query(query, connection, (error, result) => {
-    if (error) {
-      reject(error);
-      return;
-    }
-    resolve(result);
-  });
-});
+const Query = async (connection: mysql.Connection, query: string) => new Promise(
+  (resolve, reject) => {
+    connection.query(query, connection, (error, result) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(result);
+    });
+  },
+);
 
 const CreateItem = async (table: string, itemObj: Object) => {
   const keys = `(${Object.keys(itemObj).join(', ')})`;
@@ -52,10 +62,14 @@ const CreateItem = async (table: string, itemObj: Object) => {
   const query = `INSERT INTO ${table} ${keys} VALUES (${values.slice(0, -2)})`;
   try {
     const connection = await ConnectDb();
-    await Query(connection, query);
+    const info = await Query(connection, query).then((res) => JSON.parse(JSON.stringify(res)));
     logger.info(NAMESPACE, `creating item for table ${table}`, itemObj);
     connection.end();
-    return itemObj;
+
+    return {
+      ...itemObj,
+      id: info.insertId,
+    };
   } catch (error) {
     logger.error(NAMESPACE, error.message, error);
   }
@@ -69,18 +83,24 @@ const CreateItem = async (table: string, itemObj: Object) => {
  * '"dayShift"')
  * @returns
  */
-const ReadItems = async (table: string, filters?: Filters, jsonFilter?: Filters) : Promise<any> => {
+const ReadItems = async (
+  table: string,
+  filters?: Filters,
+  jsonFilter?: Filters,
+): Promise<any> => {
   try {
     let queryString = `SELECT * from ${table}`;
 
     if (filters) queryString += ` ${stringifyQueryFilter(filters)}`;
     if (jsonFilter) {
-      queryString += `${filters ? ' AND' : 'WHERE'} ${jsonQueryFilter(jsonFilter)}`;
+      queryString += `${filters ? ' AND' : 'WHERE'} ${jsonQueryFilter(
+        jsonFilter,
+      )}`;
     }
 
     const connection = await ConnectDb();
     const items = await Query(connection, queryString);
-    const parsed:[] = JSON.parse(JSON.stringify(items)).map((item:object) => parseSqlJson(item));
+    const parsed: [] = JSON.parse(JSON.stringify(items)).map((item: object) => parseSqlJson(item));
     logger.info(
       NAMESPACE,
       `reading items from ${table}, query is ${queryString}`,
@@ -100,7 +120,9 @@ const UpdateItem = async (
 ) => {
   try {
     let query = Object.entries(itemObj).reduce(
-      (acc, [key, value]) => `${acc}${key} = "${typeof value === 'object' ? JSON.stringify(value) : value}", `,
+      (acc, [key, value]) => `${acc}${key} = "${
+        typeof value === 'object' ? JSON.stringify(value) : value
+      }", `,
       '',
     );
     query = fixBracketsJSON(query);
@@ -122,7 +144,7 @@ const UpdateItem = async (
   }
 };
 
-const DeleteItem = async (table: string, id: string | number) :Promise<any> => {
+const DeleteItem = async (table: string, id: string | number): Promise<any> => {
   try {
     const connection = await ConnectDb();
     const deleted = await Query(
@@ -138,36 +160,36 @@ const DeleteItem = async (table: string, id: string | number) :Promise<any> => {
   }
 };
 
-class CustomCRUD <T> {
-  readonly tableName:string = '';
+class CustomCRUD<T> {
+  readonly tableName: string = '';
 
-  constructor(table:string) {
+  constructor(table: string) {
     this.tableName = table;
   }
 
-  async create(newItem: T):Promise<unknown> {
+  async create(newItem: T): Promise<unknown> {
     const data = await CreateItem(this.tableName, newItem);
     return data;
   }
 
   /**
    *
- * @param filters object, dont try to filter json with it
- * @param jsonFilters object ex {worksInShifts: 'dayShift'} =>json_contains (worksInShifts,
- * '"dayShift"')
+   * @param filters object, dont try to filter json with it
+   * @param jsonFilters object ex {worksInShifts: 'dayShift'} =>json_contains (worksInShifts,
+   * '"dayShift"')
    */
 
-  async read(filters?:Filters, jsonFilters?: Filters):Promise<T[] | []> {
+  async read(filters?: Filters, jsonFilters?: Filters): Promise<T[] | []> {
     const data = await ReadItems(this.tableName, filters, jsonFilters);
     return data;
   }
 
-  async update(id:ID, newItem: T) :Promise<unknown> {
+  async update(id: ID, newItem: T): Promise<unknown> {
     const data = await UpdateItem(this.tableName, id, newItem);
     return data;
   }
 
-  async delete(id: ID):Promise<T[]> {
+  async delete(id: ID): Promise<T[]> {
     const data = await DeleteItem(this.tableName, id);
     return data;
   }
@@ -178,9 +200,9 @@ const CashRegCRUD = new CustomCRUD<CashRegister>('CashRegister');
 const WorkScheduleCRUD = new CustomCRUD<WorkingSchedule>('workingSchedule');
 
 class CashierCustomCRUD extends CustomCRUD<Cashier> {
-  readonly tableName2:string;
+  readonly tableName2: string;
 
-  constructor(table:string, table2:string) {
+  constructor(table: string, table2: string) {
     super(table);
     this.tableName2 = table2;
   }
@@ -202,7 +224,10 @@ class CashierCustomCRUD extends CustomCRUD<Cashier> {
       let { pastWorks } = cashier[0];
       if (!Array.isArray(pastWorks)) pastWorks = [];
       if (!pastWorks.includes(+shopId)) pastWorks.push(+shopId);
-      const updated = await this.update(cashierId, { ...cashier[0], pastWorks });
+      const updated = await this.update(cashierId, {
+        ...cashier[0],
+        pastWorks,
+      });
       return updated;
     } catch (error) {
       logger.error(NAMESPACE, 'error fireCashier', error.message);
@@ -212,21 +237,32 @@ class CashierCustomCRUD extends CustomCRUD<Cashier> {
   static async getTargetCashiers1() {
     try {
       const connection = await ConnectDb();
-      let neededShopIds = await Query(connection, `SELECT id from Shop where name = "Arsen" or name = "Silpo"
-      `).then((data) => JSON.parse(JSON.stringify(data)));
-      neededShopIds = neededShopIds.reduce((acc:string, { id } : { [key:string]:number },
-        index:number) => {
-        let res = acc;
-        res += ` ${index === 0 ? 'and' : 'or'} json_contains(pastWorks,'${id}')`;
-        return res;
-      }, '');
+      let neededShopIds = await Query(
+        connection,
+        `SELECT id from Shop where name = "Arsen" or name = "Silpo"
+      `,
+      ).then((data) => JSON.parse(JSON.stringify(data)));
+      neededShopIds = neededShopIds.reduce(
+        (acc: string, { id }: { [key: string]: number }, index: number) => {
+          let res = acc;
+          res += ` ${
+            index === 0 ? 'and' : 'or'
+          } json_contains(pastWorks,'${id}')`;
+          return res;
+        },
+        '',
+      );
 
-      const targetedCashiers = await Query(connection, `SELECT * from cashier where id in (SELECT cashierId from CashiersInShops where shopId in (SELECT id from Shop WHERE name = "ATB" AND city = "Lviv")
-      ) and yearsOfExperience >= 5 ${neededShopIds}`);
+      const targetedCashiers = await Query(
+        connection,
+        `SELECT * from cashier where id in (SELECT cashierId from CashiersInShops where shopId in (SELECT id from Shop WHERE name = "ATB" AND city = "Lviv")
+      ) and yearsOfExperience >= 5 ${neededShopIds}`,
+      );
 
       connection.end();
-      const parsed:[] = JSON.parse(JSON.stringify(targetedCashiers))
-        .map((item:object) => parseSqlJson(item));
+      const parsed: [] = JSON.parse(JSON.stringify(targetedCashiers)).map(
+        (item: object) => parseSqlJson(item),
+      );
 
       return parsed;
     } catch (error) {
@@ -237,13 +273,15 @@ class CashierCustomCRUD extends CustomCRUD<Cashier> {
   static async getTargetCashiers2() {
     try {
       const connection = await ConnectDb();
-      const data = await Query(connection, ` SELECT * from cashier WHERE id in (SELECT cashierId from (SELECT CashRegister.number, workingSchedule.dayOfTheWeek, workingSchedule.shiftName, workingSchedule.shopId, workingSchedule.cashierId
+      const data = await Query(
+        connection,
+        ` SELECT * from cashier WHERE id in (SELECT cashierId from (SELECT CashRegister.number, workingSchedule.dayOfTheWeek, workingSchedule.shiftName, workingSchedule.shopId, workingSchedule.cashierId
         from CashRegister JOIN workingSchedule ON CashRegister.id =  workingSchedule.cashRegisterId ) as B WHERE shopId in (SELECT id from Shop where name = 'ATB' and address = 'Shevenka  100')
-         AND dayOfTheWeek = 'Monday' AND mod(number,2) <> 0 )`);
+         AND dayOfTheWeek = 'Monday' AND mod(number,2) <> 0 )`,
+      );
 
-      const parsed:[] = JSON.parse(JSON.stringify(data))
-        .map((item:object) => parseSqlJson(item));
-
+      const parsed: [] = JSON.parse(JSON.stringify(data)).map((item: object) => parseSqlJson(item));
+      connection.end();
       return parsed;
     } catch (error) {
       logger.error(NAMESPACE, 'error getTargetCashiers2', error.message);

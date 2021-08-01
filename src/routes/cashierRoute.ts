@@ -43,7 +43,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const {
-      name, age, sex, yearsOfExperience, worksInShifts, pastWorks,
+      name, age, sex, yearsOfExperience, worksInShifts,
     } = req.body;
     const newItem = await CashierCRUD.create({
       name,
@@ -51,7 +51,6 @@ router.post('/', async (req: Request, res: Response) => {
       sex,
       yearsOfExperience,
       worksInShifts,
-      pastWorks,
     });
     res.status(200).send(newItem);
   } catch (error) {
