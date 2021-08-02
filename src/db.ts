@@ -208,7 +208,9 @@ class CashierCustomCRUD extends CustomCRUD<Cashier> {
   }
 
   async hireCashier(cashierId: ID, shopId: ID) {
-    const data = await CreateItem(this.tableName2, { cashierId, shopId });
+    const connection = await ConnectDb();
+    const data = await Query(connection, `REPLACE INTO ${this.tableName2}(cashierId, shopId, isHired) values( ${cashierId}, ${shopId}, 1) `);
+    connection.end();
     return data;
   }
 
@@ -217,16 +219,13 @@ class CashierCustomCRUD extends CustomCRUD<Cashier> {
       const connection = await ConnectDb();
       await Query(
         connection,
-        `DELETE from ${this.tableName2} WHERE cashierId = ${cashierId}`,
+        `REPLACE INTO ${this.tableName2}(cashierId, shopId, isHired) values( ${cashierId}, ${shopId}, 0) `,
       );
       connection.end();
       const cashier = await this.read({ id: cashierId });
-      let { pastWorks } = cashier[0];
-      if (!Array.isArray(pastWorks)) pastWorks = [];
-      if (!pastWorks.includes(+shopId)) pastWorks.push(+shopId);
       const updated = await this.update(cashierId, {
         ...cashier[0],
-        pastWorks,
+
       });
       return updated;
     } catch (error) {
@@ -237,26 +236,10 @@ class CashierCustomCRUD extends CustomCRUD<Cashier> {
   static async getTargetCashiers1() {
     try {
       const connection = await ConnectDb();
-      let neededShopIds = await Query(
-        connection,
-        `SELECT id from Shop where name = "Arsen" or name = "Silpo"
-      `,
-      ).then((data) => JSON.parse(JSON.stringify(data)));
-      neededShopIds = neededShopIds.reduce(
-        (acc: string, { id }: { [key: string]: number }, index: number) => {
-          let res = acc;
-          res += ` ${
-            index === 0 ? 'and' : 'or'
-          } json_contains(pastWorks,'${id}')`;
-          return res;
-        },
-        '',
-      );
-
       const targetedCashiers = await Query(
         connection,
-        `SELECT * from cashier where id in (SELECT cashierId from CashiersInShops where shopId in (SELECT id from Shop WHERE name = "ATB" AND city = "Lviv")
-      ) and yearsOfExperience >= 5 ${neededShopIds}`,
+        `SELECT * from cashier where id in (SELECT cashierId from CashiersInShops where cashierId in (SELECT cashierId from CashiersInShops where shopId in (SELECT  id from Shop where name ="ATB" and city = "Lviv"))
+        and shopId in (SELECT  id from Shop where name ="Arsen" or name = "Silpo")) AND yearsOfExperience >=5`,
       );
 
       connection.end();
@@ -274,10 +257,11 @@ class CashierCustomCRUD extends CustomCRUD<Cashier> {
     try {
       const connection = await ConnectDb();
       const data = await Query(
+
         connection,
         ` SELECT * from cashier WHERE id in (SELECT cashierId from (SELECT CashRegister.number, workingSchedule.dayOfTheWeek, workingSchedule.shiftName, workingSchedule.shopId, workingSchedule.cashierId
-        from CashRegister JOIN workingSchedule ON CashRegister.id =  workingSchedule.cashRegisterId ) as B WHERE shopId in (SELECT id from Shop where name = 'ATB' and address = 'Shevenka  100')
-         AND dayOfTheWeek = 'Monday' AND mod(number,2) <> 0 )`,
+          from CashRegister JOIN workingSchedule ON CashRegister.id =  workingSchedule.cashRegisterId ) as B WHERE shopId in (SELECT id from Shop where name = 'ATB' and address = 'Shevenka  100')
+           AND dayOfTheWeek = 'Monday' AND mod(number,2) <> 0 )`,
       );
 
       const parsed: [] = JSON.parse(JSON.stringify(data)).map((item: object) => parseSqlJson(item));

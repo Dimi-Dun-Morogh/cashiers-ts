@@ -1,5 +1,3 @@
-console.log('hello world1');
-const allCashiersBtn = document.querySelector('#all-cashiers');
 
 class ApiDb {
   constructor(baseUrl) {
@@ -73,12 +71,11 @@ class RenderElements {
   popCashiers(cashiers) {
     this.wipeDbElements();
     const html = cashiers.reduce((acc, item) => {
-      let { id, name, age, sex, yearsOfExperience, worksInShifts, pastWorks } =
+      let { id, name, age, sex, yearsOfExperience, worksInShifts } =
         item;
       worksInShifts = Array.isArray(worksInShifts)
         ? JSON.stringify(worksInShifts)
         : '';
-      pastWorks = Array.isArray(pastWorks) ? JSON.stringify(pastWorks) : '';
       acc += `
       <div class="db-content-item  col-md-3 me-1 my-2">
       <ul class="list-group">
@@ -88,7 +85,6 @@ class RenderElements {
         <li class="list-group-item">sex: ${sex}</li>
         <li class="list-group-item">yearsOfExperience: ${yearsOfExperience}</li>
         <li class="list-group-item">worksInShifts: ${worksInShifts}</li>
-        <li class="list-group-item">pastWorks(ids): ${pastWorks}</li>
       </ul>
     </div>
       `;

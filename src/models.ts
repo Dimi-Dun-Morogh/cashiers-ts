@@ -31,7 +31,6 @@ export type Cashier = {
   yearsOfExperience: number
   name: string
   worksInShifts: Shiftname[]
-  pastWorks?: number[]
 };
 
 export type CashRegister = {

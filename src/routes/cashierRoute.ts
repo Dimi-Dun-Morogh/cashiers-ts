@@ -89,7 +89,7 @@ router.post('/fire', async (req: Request, res: Response) => {
 router.put('/', async (req: Request, res: Response) => {
   try {
     const {
-      id, name, age, sex, yearsOfExperience, worksInShifts, pastWorks,
+      id, name, age, sex, yearsOfExperience, worksInShifts,
     } = req.body;
     const newItem = await CashierCRUD.update(id, {
       name,
@@ -97,7 +97,6 @@ router.put('/', async (req: Request, res: Response) => {
       sex,
       yearsOfExperience,
       worksInShifts,
-      pastWorks,
     });
     res.status(200).send(newItem);
   } catch (error) {
